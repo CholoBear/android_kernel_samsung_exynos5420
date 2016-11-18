@@ -57,6 +57,10 @@ static inline void disable_cpufreq(void) { }
 #define CPUFREQ_POLICY_POWERSAVE	(1)
 #define CPUFREQ_POLICY_PERFORMANCE	(2)
 
+/* Minimum frequency cutoff to notify the userspace about cpu utilization
+ * changes */
+#define MIN_CPU_UTIL_NOTIFY   40
+
 /* Frequency values here are CPU kHz so that hardware which doesn't run
  * with some frequencies can complain without having to guess what per
  * cent / per mille means.
@@ -97,6 +101,7 @@ struct cpufreq_policy {
 	unsigned int		max;    /* in kHz */
 	unsigned int		cur;    /* in kHz, only needed if cpufreq
 					 * governors are used */
+	unsigned int            util;  /* CPU utilization at max frequency */
 	unsigned int		policy; /* see above */
 	struct cpufreq_governor	*governor; /* see below */
 
@@ -209,6 +214,7 @@ void cpufreq_unregister_governor(struct cpufreq_governor *governor);
 
 #define CPUFREQ_RELATION_L 0  /* lowest frequency at or above target */
 #define CPUFREQ_RELATION_H 1  /* highest frequency below or at target */
+#define CPUFREQ_RELATION_C 2 /* closest frequency to target */
 
 struct freq_attr;
 
@@ -256,7 +262,8 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
 
 
 void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state);
-
+void cpufreq_notify_utilization(struct cpufreq_policy *policy,
+		unsigned int load);
 
 static inline void cpufreq_verify_within_limits(struct cpufreq_policy *policy, unsigned int min, unsigned int max)
 {
@@ -376,9 +383,6 @@ extern struct cpufreq_governor cpufreq_gov_uberdemand;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ADAPTIVE)
 extern struct cpufreq_governor cpufreq_gov_adaptive;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_adaptive)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_BRAZILIANWAX)
-extern struct cpufreq_governor cpufreq_gov_brazilianwax;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_brazilianwax)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE)
 extern struct cpufreq_governor cpufreq_gov_conservative;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservative)
@@ -441,12 +445,12 @@ extern struct cpufreq_governor cpufreq_gov_smartmax;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_OPTIMAX)
 extern struct cpufreq_governor cpufreq_gov_optimax;
 #define CPUFREQ_DEFAULT_GOVERNOR        (&cpufreq_gov_optimax)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_SLIM)
-extern struct cpufreq_governor cpufreq_gov_slim;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_slim)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIMM)
 extern struct cpufreq_governor cpufreq_gov_intellimm;
 #define CPUFREQ_DEFAULT_GOVERNOR        (&cpufreq_gov_intellimm)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVEX)
+extern struct cpufreq_governor cpufreq_gov_conservativex;
+#define CPUFREQ_DEFAULT_GOVERNOR        (&cpufreq_gov_conservativex)
 #endif
 
 
