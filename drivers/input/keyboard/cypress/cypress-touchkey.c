@@ -9,6 +9,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -38,6 +39,12 @@
 
 #include "issp_extern.h"
 #include "cypress_touchkey.h"
+
+#if defined(CONFIG_INPUT_BOOSTER) || defined(TOUCHKEY_BOOSTER)
+static unsigned int TOUCHKEY_BOOSTER_ENABLED = 1;
+
+module_param_named(touchkey_booster_enabled, TOUCHKEY_BOOSTER_ENABLED, uint, S_IWUSR | S_IRUGO);
+#endif
 
 #ifdef TK_HAS_FIRMWARE_UPDATE
 u8 *tk_fw_name = FW_PATH;
@@ -1342,9 +1349,11 @@ static irqreturn_t touchkey_interrupt(int irq, void *dev_id)
 	}
 
 #ifdef TOUCHKEY_BOOSTER
+if (TOUCHKEY_BOOSTER_ENABLED == 1)
 	touchkey_set_dvfs_lock(tkey_i2c, !!pressed);
 #endif
 #ifdef CONFIG_INPUT_BOOSTER
+if (TOUCHKEY_BOOSTER_ENABLED == 1)
 	INPUT_BOOSTER_SEND_EVENT(tkey_code[1],
 		!!pressed);
 #endif
@@ -1399,6 +1408,7 @@ static int touchkey_stop(struct touchkey_i2c *tkey_i2c)
 	tkey_i2c->enabled = false;
 	tkey_i2c->status_update = false;
 #ifdef TOUCHKEY_BOOSTER
+if (TOUCHKEY_BOOSTER_ENABLED == 1)
 	touchkey_set_dvfs_lock(tkey_i2c, 2);
 #endif
 
@@ -1804,6 +1814,17 @@ static ssize_t glove_mode_enable(struct device *dev,
 
 	return size;
 }
+
+static ssize_t glove_mode_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct touchkey_i2c *tkey_i2c = dev_get_drvdata(dev);
+
+	if (!tkey_i2c)
+		return -ENODEV;
+
+	return sprintf(buf, "%d", tkey_i2c->tsk_glove_mode_status);
+}
 #endif
 
 #ifdef TKEY_FLIP_MODE
@@ -2012,7 +2033,7 @@ static DEVICE_ATTR(autocal_stat, S_IRUGO | S_IWUSR | S_IWGRP,
 		   autocalibration_status, NULL);
 #endif
 #if defined(CONFIG_GLOVE_TOUCH)
-static DEVICE_ATTR(glove_mode, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
+static DEVICE_ATTR(glove_mode, S_IRUGO|S_IWUSR, glove_mode_show,
 		   glove_mode_enable);
 #endif
 #ifdef TKEY_FLIP_MODE
